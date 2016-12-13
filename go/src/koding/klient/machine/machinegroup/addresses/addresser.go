@@ -15,7 +15,7 @@ type Addresser interface {
 	// Latests returns the latest known address for a given machine and network.
 	Latest(machine.ID, string) (machine.Addr, error)
 
-	// MachineID gets machine ID based on provided address.
+	// MachineID gets machine IDs based on provided address.
 	MachineID(machine.Addr) (machine.ID, error)
 
 	// Registered returns all machines that are managed by addresser.

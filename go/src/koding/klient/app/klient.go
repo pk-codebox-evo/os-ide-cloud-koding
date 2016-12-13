@@ -506,7 +506,8 @@ func (k *Klient) RegisterMethods() {
 	k.kite.HandleFunc("fs.getPathSize", fs.GetPathSize)
 
 	// Machine group handlers.
-	k.kite.HandleFunc("machine.create", machinegroup.KiteCreateHandler(k.machines))
+	k.kite.HandleFunc("machine.create", machinegroup.KiteHandlerCreate(k.machines))
+	k.kite.HandleFunc("machine.id", machinegroup.KiteHandlerID(k.machines))
 
 	// Vagrant
 	k.kite.HandleFunc("vagrant.create", k.vagrant.Create)
