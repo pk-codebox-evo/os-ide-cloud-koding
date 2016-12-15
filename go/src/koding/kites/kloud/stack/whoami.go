@@ -11,19 +11,9 @@ import (
 //
 // TODO(rjeczalik): replace with team.Team
 type Team struct {
-	Name         string `json:"name"`
-	Title        string `json:"title"`
-	Subscription string `json:"subscription,omitempty"`
-}
-
-// IsSubActive checks if Team's subscription is active.
-func (t *Team) IsSubActive() bool {
-	switch t.Subscription {
-	case models.PaymentStatusActive, models.PaymentStatusTrailing:
-		return true
-	default:
-		return false
-	}
+	Name      string           `json:"name"`
+	Title     string           `json:"title"`
+	SubStatus models.SubStatus `json:"subscription,omitempty"`
 }
 
 // WhoamiResponse represents a response value for a "team.whoami" kite method.
@@ -47,9 +37,9 @@ func (k *Kloud) TeamWhoami(r *kite.Request) (interface{}, error) {
 
 	return &WhoamiResponse{
 		Team: &Team{
-			Name:         group.Slug,
-			Title:        group.Title,
-			Subscription: group.Payment.Subscription.Status,
+			Name:      group.Slug,
+			Title:     group.Title,
+			SubStatus: group.Payment.Subscription.Status,
 		},
 	}, nil
 }
