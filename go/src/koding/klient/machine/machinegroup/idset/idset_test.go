@@ -10,7 +10,7 @@ import (
 
 func TestUnion(t *testing.T) {
 	tests := map[string]struct {
-		A, B, Expected []machine.ID
+		A, B, Expected machine.IDSlice
 	}{
 		"simple union": {
 			A:        genIDs("x1, x2, x3, x4"),
@@ -56,7 +56,7 @@ func TestUnion(t *testing.T) {
 
 func TestIntersection(t *testing.T) {
 	tests := map[string]struct {
-		A, B, Expected []machine.ID
+		A, B, Expected machine.IDSlice
 	}{
 		"simple intersection": {
 			A:        genIDs("x1, x2, x3, x4"),
@@ -102,7 +102,7 @@ func TestIntersection(t *testing.T) {
 
 func TestDiff(t *testing.T) {
 	tests := map[string]struct {
-		A, B, Expected []machine.ID
+		A, B, Expected machine.IDSlice
 	}{
 		"simple diff": {
 			A:        genIDs("x1, x2, x3, x4"),
@@ -146,9 +146,9 @@ func TestDiff(t *testing.T) {
 	}
 }
 
-func genIDs(ids string) (res []machine.ID) {
+func genIDs(ids string) (res machine.IDSlice) {
 	if ids == "" {
-		return []machine.ID{}
+		return machine.IDSlice{}
 	}
 
 	for _, id := range strings.Split(ids, ",") {
