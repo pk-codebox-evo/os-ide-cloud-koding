@@ -1,9 +1,11 @@
 globals = require 'globals'
 checkFlag = require './util/checkFlag'
 kd = require 'kd'
-KDView = kd.View
-KDViewController = kd.ViewController
-module.exports = class MainViewController extends KDViewController
+whoami = require './util/whoami'
+MembershipRoleChangedModal =  require 'app/components/membershiprolechangedmodal'
+
+
+module.exports = class MainViewController extends kd.ViewController
 
   logViewByElement = (el) ->
 
@@ -21,7 +23,6 @@ module.exports = class MainViewController extends KDViewController
 
     mainView             = @getView()
     appManager           = kd.singleton 'appManager'
-    display              = kd.singleton 'display'
 
     mainView.on 'MainTabPaneShown', (pane) =>
       @mainTabPaneChanged mainView, pane
@@ -30,15 +31,27 @@ module.exports = class MainViewController extends KDViewController
       { customName, name } = controller.getOptions()
       @setBodyClass kd.utils.slugify customName ? name
 
-    display?.on 'ContentDisplayWantsToBeShown', do =>
-      type = null
-      (view) => @setBodyClass type  if type = view.getOption 'type'
-
     if globals.config?.environment isnt 'production'
       global.addEventListener 'click', (event) ->
         if event.metaKey and event.altKey
           logViewByElement event.target
       , yes
+
+    { groupsController } = kd.singletons
+
+    groupsController.ready ->
+      groupsController.on 'MembershipRoleChanged', (data) ->
+        { reactor } = kd.singletons
+        { contents: { role, id, adminNick } } = data
+        reactor.dispatch 'UPDATE_TEAM_MEMBER_WITH_ID', { id, role }
+
+        if id is whoami()._id
+          modal = new MembershipRoleChangedModal
+            success: ->
+              modal.destroy()
+              global.location.reload yes
+          , { role, adminNick }
+
 
 
   loadView: (mainView) ->
@@ -47,8 +60,8 @@ module.exports = class MainViewController extends KDViewController
 
       { body } = global.document
       if checkFlag 'super-admin'
-      then KDView.setElementClass body, 'add', 'super'
-      else KDView.setElementClass body, 'remove', 'super'
+      then kd.View.setElementClass body, 'add', 'super'
+      else kd.View.setElementClass body, 'remove', 'super'
 
 
   setBodyClass: do ->
@@ -58,8 +71,8 @@ module.exports = class MainViewController extends KDViewController
     (name) ->
 
       { body } = global.document
-      KDView.setElementClass body, 'remove', previousClass  if previousClass
-      KDView.setElementClass body, 'add', name
+      kd.View.setElementClass body, 'remove', previousClass  if previousClass
+      kd.View.setElementClass body, 'add', name
       previousClass = name
 
 
@@ -68,10 +81,6 @@ module.exports = class MainViewController extends KDViewController
     appManager      = kd.getSingleton 'appManager'
     { mainTabView } = mainView
 
-    # warn 'set active nav item by route change, not by maintabpane change'
-    # kd.singleton('display').emit "ContentDisplaysShouldBeHidden"
-    # temp fix
-    # until fixing the original issue w/ the dnd this should be kept here
     if pane
     then @setViewState pane.getOptions()
     else mainTabView.getActivePane().show()
@@ -88,8 +97,8 @@ module.exports = class MainViewController extends KDViewController
     appsWithSidebar = [ 'content-display', 'Dashboard', 'Stackeditor' ]
 
     if (isApp = behavior is 'application') or (name in fullSizeApps)
-    then KDView.setElementClass html, 'add', 'app'
-    else KDView.setElementClass html, 'remove', 'app'
+    then kd.View.setElementClass html, 'add', 'app'
+    else kd.View.setElementClass html, 'remove', 'app'
 
     if isApp or name in appsWithSidebar
     then mainView.setClass 'with-sidebar'

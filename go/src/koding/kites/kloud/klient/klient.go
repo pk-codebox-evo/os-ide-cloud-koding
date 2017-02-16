@@ -3,6 +3,7 @@
 package klient
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -10,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"koding/klient/fs"
+	"koding/klient/machine/index"
 	"koding/klient/sshkeys"
 
 	"github.com/koding/kite"
@@ -42,6 +45,9 @@ type Klient struct {
 	kite     *kite.Kite
 	Username string
 	Timeout  time.Duration
+
+	mu  sync.Mutex
+	ctx context.Context
 }
 
 func (k *Klient) timeout() time.Duration {
@@ -153,7 +159,7 @@ func ConnectTimeout(k *kite.Kite, queryString string, t time.Duration) (*Klient,
 	err = remoteKite.DialTimeout(t)
 	if err != nil {
 		// If kite exists but dialing failed, we still return the *Klient
-		// value, althought not connected, in order to allow the caller
+		// value, although not connected, in order to allow the caller
 		// inspect the URL and eventually recover.
 		err = ErrDialingFailed
 	}
@@ -223,7 +229,7 @@ func (k *Klient) Usage() (*Usage, error) {
 }
 
 // Ping checks if the given klient response with "pong" to the "ping" we send.
-// A nil error means a successfull pong result.
+// A nil error means a successful pong result.
 func (k *Klient) Ping() error {
 	resp, err := k.Client.TellWithTimeout("kite.ping", 10*time.Second)
 	if err != nil {
@@ -337,4 +343,85 @@ func (k *Klient) SSHAddKeys(username string, keys ...string) error {
 	// TODO(ppknap): currently sshkeys.add method can return either nil or true
 	// as its response. Add proper support for this.
 	return nil
+}
+
+// MountHeadIndex returns the number and the overall size of files in a given
+// remote directory.
+func (k *Klient) MountHeadIndex(path string) (absPath string, count int, diskSize int64, err error) {
+	req := index.Request{
+		Path: path,
+	}
+
+	raw, err := k.Client.TellWithTimeout("machine.index.head", k.timeout(), req)
+	if err != nil {
+		return "", 0, 0, err
+	}
+
+	resp := index.HeadResponse{}
+	if err := raw.Unmarshal(&resp); err != nil {
+		return "", 0, 0, err
+	}
+
+	return resp.AbsPath, resp.Count, resp.DiskSize, nil
+}
+
+// MountGetIndex returns an index that describes the current state of remote
+// directory.
+func (k *Klient) MountGetIndex(path string) (*index.Index, error) {
+	req := index.Request{
+		Path: path,
+	}
+
+	raw, err := k.Client.TellWithTimeout("machine.index.get", k.timeout(), req)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := index.GetResponse{
+		Index: index.NewIndex(),
+	}
+	if err := raw.Unmarshal(&resp); err != nil {
+		return nil, err
+	}
+
+	if resp.Index == nil {
+		return nil, errors.New("retrieved index is nil")
+	}
+
+	return resp.Index, nil
+}
+
+// DiskInfo gets basic information about volume pointed by provided path.
+func (k *Klient) DiskInfo(path string) (fs.DiskInfo, error) {
+	req := fs.GetInfoOptions{
+		Path: path,
+	}
+
+	raw, err := k.Client.TellWithTimeout("fs.getDiskInfo", k.timeout(), req)
+	if err != nil {
+		return fs.DiskInfo{}, err
+	}
+
+	resp := fs.DiskInfo{}
+	if err := raw.Unmarshal(&resp); err != nil {
+		return fs.DiskInfo{}, err
+	}
+
+	return resp, nil
+}
+
+// SetContext sets provided context to Klient.
+func (k *Klient) SetContext(ctx context.Context) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+
+	k.ctx = ctx
+}
+
+// Context returns Klient's context.
+func (k *Klient) Context() context.Context {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+
+	return k.ctx
 }

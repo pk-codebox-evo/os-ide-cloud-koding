@@ -45,7 +45,7 @@ func prepareMongoMachines() error {
 	}
 
 	machines := []*models.Machine{
-		&models.Machine{
+		{
 			ObjectId:  boberAws0,
 			IpAddress: "127.0.0.1",
 			Provider:  "aws",
@@ -62,11 +62,11 @@ func prepareMongoMachines() error {
 				State:  "running",
 				Reason: "because it can",
 			},
-			GeneratedFrom: models.MachineGeneratedFrom{
+			GeneratedFrom: &models.MachineGeneratedFrom{
 				TemplateId: boberStack,
 			},
 		},
-		&models.Machine{
+		{
 			ObjectId: boberAws1,
 			Label:    "bober-aws-1",
 			Users: []models.MachineUser{
@@ -87,11 +87,11 @@ func prepareMongoMachines() error {
 					Username: blaster,
 				},
 			},
-			GeneratedFrom: models.MachineGeneratedFrom{
+			GeneratedFrom: &models.MachineGeneratedFrom{
 				TemplateId: boberStack,
 			},
 		},
-		&models.Machine{
+		{
 			ObjectId: johnGoogle0,
 			Label:    "john-google-0",
 			Users: []models.MachineUser{
@@ -111,11 +111,11 @@ func prepareMongoMachines() error {
 					Username: blaster,
 				},
 			},
-			GeneratedFrom: models.MachineGeneratedFrom{
+			GeneratedFrom: &models.MachineGeneratedFrom{
 				TemplateId: johnStack,
 			},
 		},
-		&models.Machine{
+		{
 			ObjectId: blasterAws0,
 			Label:    "blaster-aws-0",
 			Users: []models.MachineUser{
@@ -126,11 +126,11 @@ func prepareMongoMachines() error {
 					Username: blaster,
 				},
 			},
-			GeneratedFrom: models.MachineGeneratedFrom{
+			GeneratedFrom: &models.MachineGeneratedFrom{
 				TemplateId: blasterStack,
 			},
 		},
-		&models.Machine{
+		{
 			ObjectId: allKoding0,
 			Provider: modelhelper.MachineProviderKoding,
 			Users: []models.MachineUser{
@@ -155,19 +155,19 @@ func prepareMongoMachines() error {
 
 func prepareMongoStackTmpls() error {
 	stackTmpls := []*models.StackTemplate{
-		&models.StackTemplate{
+		{
 			Id:       boberStack,
 			Group:    "orange",
 			Title:    "boberStack",
 			OriginID: bson.NewObjectId(),
 		},
-		&models.StackTemplate{
+		{
 			Id:       johnStack,
 			Group:    "orange",
 			Title:    "johnStack",
 			OriginID: bson.NewObjectId(),
 		},
-		&models.StackTemplate{
+		{
 			Id:       blasterStack,
 			Group:    "orange",
 			Title:    "blasterStack",
@@ -200,7 +200,7 @@ func TestMongoDatabase(t *testing.T) {
 			},
 			IsValid: true,
 			Machines: []*Machine{
-				&Machine{
+				{
 					ID:       boberAws0.Hex(),
 					Team:     "orange",
 					Stack:    "boberStack",
@@ -219,7 +219,7 @@ func TestMongoDatabase(t *testing.T) {
 						},
 					},
 				},
-				&Machine{
+				{
 					ID:    boberAws1.Hex(),
 					Team:  "orange",
 					Stack: "boberStack",
@@ -232,7 +232,7 @@ func TestMongoDatabase(t *testing.T) {
 						},
 					},
 				},
-				&Machine{
+				{
 					ID:    johnGoogle0.Hex(),
 					Team:  "orange",
 					Stack: "johnStack",
@@ -260,7 +260,7 @@ func TestMongoDatabase(t *testing.T) {
 			},
 			IsValid: true,
 			Machines: []*Machine{
-				&Machine{
+				{
 					ID:    boberAws1.Hex(),
 					Team:  "orange",
 					Stack: "boberStack",
@@ -277,7 +277,7 @@ func TestMongoDatabase(t *testing.T) {
 						},
 					},
 				},
-				&Machine{
+				{
 					ID:    johnGoogle0.Hex(),
 					Team:  "orange",
 					Stack: "johnStack",
@@ -301,7 +301,7 @@ func TestMongoDatabase(t *testing.T) {
 			},
 			IsValid: true,
 			Machines: []*Machine{
-				&Machine{
+				{
 					ID:    boberAws1.Hex(),
 					Team:  "orange",
 					Stack: "boberStack",
@@ -318,7 +318,7 @@ func TestMongoDatabase(t *testing.T) {
 						},
 					},
 				},
-				&Machine{
+				{
 					ID:    blasterAws0.Hex(),
 					Team:  "orange",
 					Stack: "blasterStack",
@@ -359,7 +359,10 @@ func TestMongoDatabase(t *testing.T) {
 
 	mongoDB := NewMongoDatabase()
 	for _, test := range tests {
+		// capture range variable here
+		test := test
 		t.Run(test.Name, func(t *testing.T) {
+			t.Parallel()
 			machines, err := mongoDB.Machines(test.Filter)
 			if (err == nil) != test.IsValid {
 				t.Fatalf("want valid test = %t; got err: %v", test.IsValid, err)

@@ -6,7 +6,6 @@ HomeTeamSettings     = require './hometeamsettings'
 HomeTeamPermissions  = require './hometeampermissions'
 TeamFlux             = require 'app/flux/teams'
 AppFlux              = require 'app/flux'
-whoami               = require 'app/util/whoami'
 remote               = require 'app/remote'
 headerize = require '../commons/headerize'
 sectionize = require '../commons/sectionize'
@@ -60,6 +59,16 @@ module.exports = class HomeMyTeam extends kd.CustomScrollView
     TeamFlux.actions.loadDisabledUsers()
     AppFlux.actions.user.loadLoggedInUserEmail()
 
+    groupsController.on 'InvitationChanged', (data) ->
+
+      { contents: { type, invitations, id } } = data
+
+      switch type
+        when 'remove'
+          reactor.dispatch 'REMOVE_PENDING_INVITATION_BY_ID', { id }
+        when 'new_invitations'
+          TeamFlux.actions.loadPendingInvitations()
+
     groupsController.on 'GroupJoined', (data) ->
 
       return console.warm 'We couldn\'t fetch neccessary information'  unless data.contents.member
@@ -109,4 +118,3 @@ module.exports = class HomeMyTeam extends kd.CustomScrollView
 
       @wrapper.addSubView headerize 'Teammates'
       @wrapper.addSubView @teammates = section 'Teammates'
-

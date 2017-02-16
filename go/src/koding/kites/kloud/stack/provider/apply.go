@@ -77,7 +77,7 @@ func (bs *BaseStack) HandleApply(ctx context.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	return stack.ControlResult{
+	return &stack.ControlResult{
 		EventId: bs.Eventer.ID(),
 	}, nil
 }
@@ -269,6 +269,12 @@ func (bs *BaseStack) applyAsync(ctx context.Context, req *stack.ApplyRequest) er
 		return err
 	}
 
+	if len(req.Variables) != 0 {
+		if err := bs.Builder.Template.InjectVariables("", req.Variables); err != nil {
+			return err
+		}
+	}
+
 	bs.Log.Debug("Stack template before injecting Koding data: %s", bs.Builder.Template)
 
 	t, err := bs.stack.ApplyTemplate(cred)
@@ -372,10 +378,10 @@ func (bs *BaseStack) UpdateResources(state *terraform.State) error {
 			continue
 		}
 
-		if cred, err := bs.Builder.CredentialByProvider(machine.Provider); err == nil {
+		if cred, e := bs.Builder.CredentialByProvider(machine.Provider); e == nil {
 			machine.Credential = cred
 		} else {
-			err = multierror.Append(err, fmt.Errorf("machine %q: no credential found for %q provider", label, machine.Provider))
+			err = multierror.Append(err, fmt.Errorf("machine %q: no credential found for %q provider: %s", label, machine.Provider, e))
 			machine.Credential = &stack.Credential{}
 		}
 
@@ -385,9 +391,9 @@ func (bs *BaseStack) UpdateResources(state *terraform.State) error {
 			continue
 		}
 
-		err := modelhelper.UpdateMachine(m.ObjectId, bson.M{"$set": bs.buildUpdateObj(machine, state, now)})
-		if err != nil {
-			err = multierror.Append(err, fmt.Errorf("machine %q failed to update: %s", label, err))
+		e := modelhelper.UpdateMachine(m.ObjectId, bson.M{"$set": bs.buildUpdateObj(machine, state, now)})
+		if e != nil {
+			err = multierror.Append(err, fmt.Errorf("machine %q failed to update: %s", label, e))
 			continue
 		}
 	}

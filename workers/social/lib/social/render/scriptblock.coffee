@@ -5,7 +5,7 @@ module.exports = (options = {}, callback) ->
   encoder   = require 'htmlencode'
   { argv }  = require 'optimist'
   _         = require 'lodash'
-  { hasCreditCard } = require '../../../../../servers/models/socialapi/requests'
+  SocialAccount = require '../../../../../servers/models/socialapi/socialaccount'
 
   options.client               or= {}
   options.client.context       or= {}
@@ -14,7 +14,6 @@ module.exports = (options = {}, callback) ->
 
 
   prefetchedFeeds     = null
-  socialapidata       = null
   currentGroup        = null
   userMachines        = null
   userWorkspaces      = null
@@ -23,7 +22,6 @@ module.exports = (options = {}, callback) ->
   roles               = null
   permissions         = null
   combinedStorage     = null
-  hasCard             = no
 
   { bongoModels, client, session } = options
 
@@ -34,12 +32,10 @@ module.exports = (options = {}, callback) ->
 
     replacer             = (k, v) -> if 'string' is typeof v then encoder.XSSEncode v else v
     { segment, client }  = KONFIG
-    { siftScience }      = client.runtimeOptions
     config               = JSON.stringify client.runtimeOptions, replacer
     userRoles            = JSON.stringify roles, replacer
     userPermissions      = JSON.stringify permissions, replacer
 
-    encodedSocialApiData = JSON.stringify socialapidata, replacer
     currentGroup         = JSON.stringify currentGroup, replacer
     userAccount          = JSON.stringify delegate, replacer
     combinedStorage      = JSON.stringify combinedStorage, replacer
@@ -69,19 +65,13 @@ module.exports = (options = {}, callback) ->
         userRoles: #{userRoles},
         userPermissions: #{userPermissions},
         currentGroup: #{currentGroup},
-        hasCreditCard: #{hasCard},
         isLoggedInOnLoad: true,
-        socialApiData: #{encodedSocialApiData},
         userEnvironmentData: #{userEnvironmentData}
       };
     </script>
 
-    <script src="/a/p/p/#{KONFIG.version}/bundle.js"></script>
-
-    #{if not impersonating then "
-      <script type='text/javascript'>
-        var _user_id = '#{nickname}'; var _session_id = '#{sessionToken}'; var _sift = _sift || []; _sift.push(['_setAccount', '#{siftScience}']); _sift.push(['_setUserId', _user_id]); _sift.push(['_setSessionId', _session_id]); _sift.push(['_trackPageview']); (function() { function ls() { var e = document.createElement('script'); e.type = 'text/javascript'; e.async = true; e.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'cdn.siftscience.com/s.js'; var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(e, s); } if (window.attachEvent) { window.attachEvent('onload', ls); } else { window.addEventListener('load', ls, false); } })();</script>
-    " else '' }
+    <script src="/a/p/p/#{KONFIG.version}/bundle.vendor.js"></script>
+    <script src="/a/p/p/#{KONFIG.version}/bundle.main.js"></script>
 
     #{if argv.t then "<script src=\"/a/js/tests.js\"></script>" else ''}
 
@@ -100,13 +90,7 @@ module.exports = (options = {}, callback) ->
   queue = [
 
     (fin) ->
-      socialApiCacheFn = require '../cache/socialapi'
-      socialApiCacheFn options, (err, data) ->
-        console.error 'could not get prefetched data', err  if err
-        socialapidata = data
-        fin()
 
-    (fin) ->
       groupName = session?.groupName or 'koding'
 
       # due to some reason, I suspect JSON.stringify somewhere, undefined
@@ -168,11 +152,9 @@ module.exports = (options = {}, callback) ->
         else console.error '[scriptblock] user not found', err
         fin()
 
-    (fin) ->
-      hasCreditCard client, (err) ->
-        hasCard = not err?
-        return fin()
-
   ]
 
-  async.parallel queue, -> callback null, createHTML(), socialapidata
+  async.parallel queue, ->
+    # datafixes is noop if no op is required. (pun intended)
+    require('./datafixes') client, currentGroup, (err, data) ->
+      callback null, createHTML()

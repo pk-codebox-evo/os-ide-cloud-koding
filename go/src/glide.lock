@@ -5,6 +5,10 @@ imports:
   version: cc2954064ec9ea8d93917f0f87456e11d7b881ad
 - name: github.com/alecthomas/gocyclo
   version: aa8f8b160214d8dfccfe3e17e578dd0fcc6fede7
+- name: github.com/alecthomas/template
+  version: a0175ee3bccc567396460bf5acd36800cb10c49c
+- name: github.com/alecthomas/units
+  version: 2efee857e7cfd4f3d0138cc3cbb1b4966962b93a
 - name: github.com/algolia/algoliasearch-client-go
   version: 57109f4eaa904be65be61a5e7c8ab257b95b9321
   subpackages:
@@ -345,12 +349,14 @@ imports:
   version: 73d19cdc2bf00788cc25f7d5fd74347d48ada9ac
 - name: github.com/hashicorp/go-version
   version: 7e3c02b30806fa5779d3bdfc152ce4c6f40e7b38
+- name: github.com/djherbis/times
+  version: f32f20272740f44736e74432b116dfd4cf5f9126
 - name: github.com/hashicorp/golang-lru
   version: 0a025b7e63adc15a622f29b0b2c4c3848243bbf6
   subpackages:
   - simplelru
 - name: github.com/hashicorp/hcl
-  version: 8fa153c5b4e9d1ccecda7075821ffc7c1f6d912b
+  version: 80e628d796135357b3d2e33a985c666b9f35eee1
   subpackages:
   - hcl/ast
   - hcl/fmtcmd
@@ -484,13 +490,7 @@ imports:
   - models
   - pkg/escape
 - name: github.com/jacobsa/fuse
-  version: 3b8b4e55df5483817cd361a28d0a830d5acd962b
-  subpackages:
-  - fuseops
-  - fuseutil
-  - internal/buffer
-  - internal/freelist
-  - internal/fusekernel
+  version: dc1be2d5b8abc34991a649f7499f9f673e36bb46
 - name: github.com/jehiah/go-strftime
   version: 834e15c05a45371503440cc195bbd05c9a0968d9
 - name: github.com/jen20/riviera
@@ -557,7 +557,7 @@ imports:
   - helpers
   - services
 - name: github.com/koding/kite
-  version: 077dc6df5fcfc0419e399f68445dc633f8cfc853
+  version: 4e1bc06aecf5e401757e07aef8eb8fa723e6ab7d
   subpackages:
   - config
   - dnode
@@ -609,6 +609,8 @@ imports:
   version: 0826b98aaa29c0766956cb40d45cf7482a597671
 - name: github.com/kr/binarydist
   version: 3035450ff8b987ec4373f65c40767f096b35f2d2
+- name: github.com/google/shlex
+  version: 6f45313302b9c56850fc17f99e40caebce98c716
 - name: github.com/kr/fs
   version: 2788f0dbd16903de03cb8186e5c7d97b69ad387b
 - name: github.com/kr/pty
@@ -987,6 +989,10 @@ imports:
   - sockjs
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
+- name: gopkg.in/alecthomas/kingpin.v2
+  version: e9044be3ab2a8e11d4e1f418d12f0790d57e8d70
+- name: gopkg.in/alecthomas/kingpin.v3-unstable
+  version: cf3c3c40a98621504e3ca4b45af0c037d3e971cb
 - name: gopkg.in/ini.v1
   version: 177219109c97e7920c933e21c9b25f874357b237
 - name: gopkg.in/macaron.v1
@@ -1028,27 +1034,27 @@ imports:
 - name: github.com/donovanhide/eventsource
   version: fd1de70867126402be23c306e1ce32828455d85b
 - name: github.com/go-openapi/runtime
-  version: 14b161b40ece9dac8e244ab2fde2d209e108c6f5
+  version: 75dade37acfd95d51485114793cdc443991ef328
 - name: github.com/go-openapi/validate
-  version: 027696d4b54399770f1cdcc6c6daa56975f9e14e
+  version: b11dbf889b64cf815a7e2667412df313f4a3f17b
 - name: github.com/go-openapi/swag
-  version: 3b6d86cd965820f968760d5d419cb4add096bdd7
+  version: 96d7b9ebd181a1735a1c9ac87914f2b32fbf56c9
 - name: github.com/go-openapi/strfmt
-  version: 34fc3ba7c0f5fb615fda47a2b4fbd4c641b215f2
+  version: 505012778ef0246e2c9dddcc5a2eaa2ce44add27
 - name: github.com/go-openapi/errors
-  version: 49fe8b3a0e0d32a617d8d50c67f856ad6e45b28b
+  version: fc3f73a224499b047eda7191e5d22e1e9631e86f
 - name: github.com/mailru/easyjson
   version: 159cdb893c982e3d1bc6450322fedd514f9c9de3
 - name: github.com/go-openapi/loads
-  version: 315567415dfd74b651f7a62cabfc82a57ed7b9ad
+  version: bf98340e04734f11563fd3008e87be4c1d4ffc08
 - name: github.com/go-openapi/jsonpointer
-  version: 8d96a2dc61536b690bd36b2e9df0b3c0b62825b2
+  version: 779f45308c19820f1a69e9a4cd965f496e0da10f
 - name: github.com/go-openapi/analysis
-  version: 7222828b8ce19afee3c595aef6643b9e42150120
+  version: d5a75b7d751ca3f11ad5d93cfe97405f2c3f6a47
 - name: github.com/asaskevich/govalidator
   version: 7b3beb6df3c42abd3509abfc3bcacc0fbfb7c877
 - name: github.com/go-openapi/spec
-  version: f7ae86df5bc115a2744343016c789a89f065a4bd
+  version: 3a0434164aa36744c7ba29b822d36894a1e5ec96
 - name: github.com/go-openapi/jsonreference
   version: 36d33bfe519efae5632669801b180bf1a245da3b
 - name: github.com/PuerkitoBio/purell
@@ -1057,8 +1063,24 @@ imports:
   version: 8a7beacffa3009a9ac66bad506b18ffdd110cf97
 - name: github.com/stretchr/testify
   version: 18a02ba4a312f95da08ff4cfc0055750ce50ae9e
+- name: github.com/dustin/go-humanize
+  version: 7a41df006ff9af79a29f0ffa9c5f21fbe6314a2d
 - name: github.com/PuerkitoBio/urlesc
   version: 5bd2802263f21d8788851d5305584c82a5c75d7e
+- name: github.com/jacobsa/oglematchers
+  version: 141901ea67cd4769c6800aa7bfdfc558fa22bda5
+- name: github.com/jacobsa/ogletest
+  version: 2a5b07c33c04a549316a1f6a10a4fe396d1aca89
+- name: g§ithub.com/jacobsa/syncutil
+  version: c39ef5c1aa0b8fae9504e0146ba34c3922d69dc0
+- name: github.com/jacobsa/timeutil
+  version: 7106ba3aceaa475584d7d2a68795027a5e080f2b
+- name: github.com/jacobsa/oglemock
+  version: e94d794d06ffc6de42cb19d0dab3c219efdd6dcf
+- name: github.com/jacobsa/reqtrace
+  version: 245c9e0234cb2ad542483a336324e982f1a22934
+- name: github.com/kylelemons/godebug
+  version: d99083b96f422f8fd5a93bc02040acec769e178f
 testImports:
 - name: github.com/vaughan0/go-ini
   version: a98ad7ee00ec53921f08832bc06ecf7fd600e6a1

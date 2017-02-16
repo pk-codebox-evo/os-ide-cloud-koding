@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"koding/db/mongodb/modelhelper"
 	"net/http"
 	"net/url"
 
@@ -27,22 +26,13 @@ func DeleteCreditCard(u *url.URL, h http.Header, _ interface{}, context *models.
 	return response.NewDefaultOK()
 }
 
-// HasCreditCard returns the existance status of group's credit card
+// HasCreditCard returns the existence status of group's credit card
 func HasCreditCard(u *url.URL, h http.Header, _ interface{}, context *models.Context) (int, http.Header, interface{}, error) {
 	if !context.IsLoggedIn() {
 		return response.NewBadRequest(models.ErrNotLoggedIn)
 	}
 
-	group, err := modelhelper.GetGroup(context.GroupName)
-	if err != nil {
-		return response.NewBadRequest(err)
-	}
-
-	if group.Payment.Customer.ID == "" {
-		return response.NewNotFound()
-	}
-
-	err = payment.CheckCustomerHasSource(group.Payment.Customer.ID)
+	err := payment.HasCreditCard(context.GroupName)
 	if err == payment.ErrCustomerSourceNotExists {
 		return response.NewNotFound()
 	}

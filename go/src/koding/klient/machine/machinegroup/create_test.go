@@ -1,23 +1,32 @@
 package machinegroup
 
 import (
+	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 	"time"
 
 	"koding/klient/machine"
-	"koding/klient/machine/machinetest"
+	"koding/klient/machine/client/clienttest"
+	"koding/klient/machine/mount/mounttest"
 )
 
 func TestCreate(t *testing.T) {
 	var (
-		builder = machinetest.NewNilBuilder()
+		builder = clienttest.NewBuilder(nil)
 
 		idA = machine.ID("servA")
 		idB = machine.ID("servB")
 	)
 
-	g, err := New(testOptions(builder))
+	wd, err := ioutil.TempDir("", "create")
+	if err != nil {
+		t.Fatalf("want err = nil; got %v", err)
+	}
+	defer os.RemoveAll(wd)
+
+	g, err := New(testOptions(wd, builder))
 	if err != nil {
 		t.Fatalf("want err = nil; got %v", err)
 	}
@@ -26,8 +35,8 @@ func TestCreate(t *testing.T) {
 	const AddedServersCount = 2
 	req := &CreateRequest{
 		Addresses: map[machine.ID][]machine.Addr{
-			idA: {machinetest.TurnOffAddr()},
-			idB: {machinetest.TurnOnAddr()},
+			idA: {clienttest.TurnOffAddr()},
+			idB: {clienttest.TurnOnAddr()},
 		},
 	}
 
@@ -74,10 +83,111 @@ func TestCreate(t *testing.T) {
 
 	// Machines were pinged and they clients were build.
 	statuses := map[machine.ID]machine.Status{
-		idA: machine.Status{State: machine.StateOffline},
-		idB: machine.Status{State: machine.StateOnline},
+		idA: {State: machine.StateOffline},
+		idB: {State: machine.StateOnline},
 	}
 	if !reflect.DeepEqual(statuses, res.Statuses) {
 		t.Fatalf("want statuses = %#v; got %#v", statuses, res.Statuses)
 	}
+}
+
+func TestCreateBalance(t *testing.T) {
+	var (
+		client  = clienttest.NewClient()
+		builder = clienttest.NewBuilder(client)
+		id      = machine.ID("serv")
+	)
+
+	wd, err := ioutil.TempDir("", "create")
+	if err != nil {
+		t.Fatalf("want err = nil; got %v", err)
+	}
+	defer os.RemoveAll(wd)
+
+	g, err := New(testOptions(wd, builder))
+	if err != nil {
+		t.Fatalf("want err = nil; got %v", err)
+	}
+	defer g.Close()
+
+	// Add connected remote machine.
+	if _, err := testCreateOn(g, builder, id); err != nil {
+		t.Fatalf("want err = nil; got %v", err)
+	}
+
+	// Create with empty addresses should remove previously added machine.
+	if _, err := g.Create(&CreateRequest{}); err != nil {
+		t.Fatalf("want err = nil; got %v", err)
+	}
+
+	// Client context should be closed.
+	if err := clienttest.WaitForContextClose(client.Context(), time.Second); err != nil {
+		t.Fatalf("want err = nil; got %v", err)
+	}
+}
+
+func TestCreateBalanceStaleMount(t *testing.T) {
+	var (
+		client  = clienttest.NewClient()
+		builder = clienttest.NewBuilder(client)
+		id      = machine.ID("serv")
+	)
+
+	wd, m, clean, err := mounttest.MountDirs()
+	if err != nil {
+		t.Fatalf("want err = nil; got %v", err)
+	}
+	defer clean()
+
+	g, err := New(testOptions(wd, builder))
+	if err != nil {
+		t.Fatalf("want err = nil; got %v", err)
+	}
+	defer g.Close()
+
+	// Add connected remote machine.
+	if _, err := testCreateOn(g, builder, id); err != nil {
+		t.Fatalf("want err = nil; got %v", err)
+	}
+
+	// Add testing mount.
+	if _, err := testAddMount(g, id, m); err != nil {
+		t.Fatalf("want err = nil; got %v", err)
+	}
+
+	// Create with empty addresses should not remove previously added machine
+	// because of mount existence.
+	if _, err := g.Create(&CreateRequest{}); err != nil {
+		t.Fatalf("want err = nil; got %v", err)
+	}
+
+	// Client context should not be closed.
+	if err := clienttest.WaitForContextClose(client.Context(), 50*time.Millisecond); err == nil {
+		t.Fatalf("want err != nil; got nil")
+	}
+}
+
+func testCreateOn(g *Group, builder *clienttest.Builder, ids ...machine.ID) (aliases map[machine.ID]string, err error) {
+	req := &CreateRequest{
+		Addresses: make(map[machine.ID][]machine.Addr),
+	}
+
+	for _, id := range ids {
+		req.Addresses[id] = []machine.Addr{
+			clienttest.TurnOnAddr(),
+		}
+	}
+
+	res, err := g.Create(req)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 0; i < len(req.Addresses); i++ {
+		if err := builder.WaitForBuild(time.Second); err != nil {
+			return nil, err
+		}
+	}
+
+	return res.Aliases, nil
 }

@@ -25,6 +25,7 @@ module.exports = class JCredential extends jraphical.Module
   }
 
   @trait __dirname, '../../traits/protected'
+  @trait __dirname, '../../traits/notifiable'
 
   @share()
 
@@ -186,6 +187,10 @@ module.exports = class JCredential extends jraphical.Module
       if provider not in ['custom', 'userInput'] and not PROVIDERS[provider]?
         callback new KodingError 'Provider is not supported'
         return
+
+      for field, value of meta
+        meta[field] = value.trim()  if typeof value is 'string'
+        delete meta[field]  if value is ''
 
       CredentialStore.create client, { meta, originId }, (err, identifier) ->
         return  if failed err, callback
@@ -488,9 +493,10 @@ module.exports = class JCredential extends jraphical.Module
   # Poor man's shadow function ~ GG
   shadowed = (c) ->
     return ''  unless c
-    c = c[0...(Math.min  c.length, 30)]
-    r = (c) -> Math.ceil c.length / 1.5
-    return "*#{Array(r c).join '*'}#{c[(r c)..]}"
+    return Array(30).join '*'  if c.length > 100
+    c = c[0...x = (Math.min  c.length, 100)]
+    r = Math.ceil c.length / 3
+    return "#{c[..r]}..."
 
 
   fetchData: (client, options, callback) ->
@@ -556,6 +562,7 @@ module.exports = class JCredential extends jraphical.Module
 
     success: (client, options, callback) ->
 
+      { context: { group }, connection: { delegate: account } } = client
       { title, meta } = options
 
       unless title or meta
@@ -566,11 +573,16 @@ module.exports = class JCredential extends jraphical.Module
       if @provider in ['custom', 'userInput']
         fields = if meta then (Object.keys meta) else []
 
-      @update { $set : { title, fields } }, (err) =>
+      notifyOptions =
+        account : account
+        group   : group
+        target  : 'account'
+
+      @updateAndNotify notifyOptions, { $set : { title, fields } }, (err) =>
         return callback err  if err?
 
         if meta?
-          CredentialStore.update client, { @identifier, meta } , callback
+          CredentialStore.update client, { @identifier, meta }, callback
         else
           callback null
 

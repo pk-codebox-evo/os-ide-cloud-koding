@@ -119,16 +119,13 @@ func RegisterCommand(c *cli.Context, log logging.Logger, _ string) int {
 	// team cannot be empty (because of required while registering)
 	// otherwise it return error while registering user
 	// store groupName or slug as "team" inside the cache
-	teamname := c.String("team")
-	session := endpointauth.Session{
+	session := &endpointauth.Session{
 		ClientID: clientID,
-		Team:     teamname,
+		Team:     r.Slug,
 	}
+
 	// Set clientId and teamname into the kd.bolt
-	if err := endpointauth.DefaultClient.SetSession(teamname, session); err != nil {
-		log.Error("error while caching team")
-		return 1
-	}
+	endpointauth.Use(session)
 
 	return 0
 }
@@ -235,7 +232,7 @@ func doRegisterRequest(r *RegisterRequest, client *http.Client, host string) (st
 
 	form := createForm(r)
 
-	req, err := http.NewRequest("POST", endpoint, strings.NewReader(form.Encode()))
+	req, _ := http.NewRequest("POST", endpoint, strings.NewReader(form.Encode()))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := client.Do(req)

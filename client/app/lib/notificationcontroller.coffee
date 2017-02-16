@@ -84,6 +84,8 @@ module.exports = class NotificationController extends KDObject
 
   setListeners: ->
 
+    { computeController } = kd.singletons
+
     @on 'GuestTimePeriodHasEnded', deleteUserCookie
 
     @on 'SessionHasEnded', ({ clientId }) ->
@@ -120,7 +122,7 @@ module.exports = class NotificationController extends KDObject
           if (ideInstance = envDataProvider.getIDEFromUId machineUId) and permanent
             ideInstance.showUserRemovedModal()
 
-      kd.singletons.computeController.reset yes
+      computeController.reset yes
 
     @on 'UsernameChanged', ({ username, oldUsername }) ->
       # FIXME: because of this (https://app.asana.com/0/search/6604719544802/6432131515387)
@@ -185,30 +187,6 @@ module.exports = class NotificationController extends KDObject
       global.location.href = '/Banned'
 
 
-    @on 'MembershipRoleChanged', ({ role, group, adminNick }) ->
-      # check if the notification is sent for current group
-      return  unless group is getGroup().slug
-
-      modal = new ContentModal
-        title : 'Your team role has been changed!'
-        overlay : yes
-        width : 500
-        cssClass : 'content-modal'
-        content :
-          """
-          <p>
-            @#{adminNick} made you #{articlize role} <strong font-weight="bold">#{role}</strong>, please refresh your browser for changes to take effect.
-          </p>
-          """
-        buttons :
-          'Reload page' :
-            title : 'Reload Page'
-            style : 'solid medium'
-            callback : (event) ->
-              modal.destroy()
-              global.location.reload yes
-
-
     @on 'InstanceChanged', (data) ->
       remote_extensions.updateInstance data
 
@@ -217,3 +195,5 @@ module.exports = class NotificationController extends KDObject
       remote_extensions.removeInstance data
 
 
+    @on 'KloudActionOverAPI', (change) ->
+      computeController.handleChangesOverAPI change

@@ -15,8 +15,6 @@ koding-go-install() {
 }
 
 export COMMANDS=(
-	koding/broker
-	koding/rerouting
 	koding/kites/kontrol
 	koding/kites/kloud
 	koding/kites/kloud/kloudctl
@@ -24,7 +22,6 @@ export COMMANDS=(
 	koding/kites/cmd/tunnelserver
 	koding/workers/cmd/tunnelproxymanager
 	koding/workers/removenonexistents
-	koding/kites/kloud/cleaners/cmd/cleaner
 	koding/kites/kloud/scripts/userdebug
 	koding/kites/kloud/scripts/sl
 	koding/klient
@@ -43,7 +40,6 @@ export COMMANDS=(
 	socialapi/workers/cmd/team
 	socialapi/workers/algoliaconnector/tagmigrator
 	socialapi/workers/algoliaconnector/contentmigrator
-	socialapi/workers/cmd/integration/eventsender
 
 	vendor/github.com/koding/kite/kitectl
 	vendor/github.com/canthefason/go-watcher
@@ -51,11 +47,14 @@ export COMMANDS=(
 	vendor/github.com/alecthomas/gocyclo
 	vendor/github.com/remyoudompheng/go-misc/deadcode
 	vendor/github.com/jteeuwen/go-bindata/go-bindata
+	vendor/github.com/wadey/gocovmerge
+	vendor/github.com/opennota/check/cmd/varcheck
+	vendor/gopkg.in/alecthomas/gometalinter.v1
 )
 
 export TERRAFORM_COMMANDS=(
 	vendor/github.com/hashicorp/terraform
-	vendor/github.com/hashicorp/terraform/builtin/bins/...
+	$(go list vendor/github.com/hashicorp/terraform/builtin/bins/... | grep -v -E 'provisioner|provider-github')
 )
 
 export TERRAFORM_CUSTOM_COMMANDS=(
@@ -75,16 +74,18 @@ for provider in $KODING_REPO/go/src/koding/kites/kloud/provider/*; do
 	fi
 done
 
+fileToBeCleaned=$GOPATH/src/vendor/github.com/hashicorp/terraform/config/interpolate_funcs.go
+grep "interpolationFuncFile()," $fileToBeCleaned && sed -i.bak '/interpolationFuncFile(),/d' $fileToBeCleaned
+
 go generate koding/kites/config koding/kites/kloud/kloud
 
 koding-go-install ${COMMANDS[@]} ${TERRAFORM_COMMANDS[@]}
-rm -rf $GOBIN/provider-github
 koding-go-install ${TERRAFORM_CUSTOM_COMMANDS[@]}
 
-mkdir -p $GOPATH/build/broker
-cp -f $GOBIN/broker $GOPATH/build/broker/broker
+# clean up unused resources in any case
+rm -rf $GOBIN/terraform-provisioner-*
 
-for cmd in $GOBIN/provider-* $GOBIN/provisioner-*; do
+for cmd in $GOBIN/provider-*; do
 	NAME=$(echo $cmd | rev | cut -d/ -f1 | rev)
 
 	ln -sf $GOBIN/$NAME $GOBIN/terraform-$NAME

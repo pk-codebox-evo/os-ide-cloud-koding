@@ -3,6 +3,7 @@ kd = require 'kd'
 Machine = require '../../providers/machine'
 KiteLogger = require '../../kitelogger'
 globals = require 'globals'
+KiteAPIMap = require './kiteapimap'
 
 
 module.exports = class KodingKiteKloudKite extends require('../kodingkite')
@@ -39,12 +40,13 @@ module.exports = class KodingKiteKloudKite extends require('../kodingkite')
       provider = getStackProvider payload.stackId
 
     if provider
+
       if provider not in SUPPORTED_PROVIDERS
         # machine/stack provider is not supported by kloud
-        return Promise.reject
+        return Promise.reject {
           name    : 'NotSupported'
           message : 'Operation is not supported for this VM/Stack'
-
+        }
 
       payload.provider = provider
 
@@ -59,39 +61,8 @@ module.exports = class KodingKiteKloudKite extends require('../kodingkite')
     ctx[method] = (payload) ->
       @tell rpcMethod, injectCustomData payload
 
-  @createApiMapping
 
-    # Eventer
-    event           : 'event'
-
-    # Machine related actions, these requires valid machineId
-    stop            : 'stop'
-    start           : 'start'
-    build           : 'build'
-    reinit          : 'reinit'
-    resize          : 'resize'
-    restart         : 'restart'
-    destroy         : 'destroy'
-
-    # Admin helpers
-    addAdmin        : 'admin.add'
-    removeAdmin     : 'admin.remove'
-
-    # Domain managament
-    setDomain       : 'domain.set'
-    addDomain       : 'domain.add'
-    unsetDomain     : 'domain.unset'
-    removeDomain    : 'domain.remove'
-
-    # Snapshots
-    createSnapshot  : 'createSnapshot'
-
-    # Stack, Teams, Credentials related methods
-    migrate         : 'migrate'
-    bootstrap       : 'bootstrap'
-    buildStack      : 'apply'
-    checkTemplate   : 'plan'
-    checkCredential : 'authenticate'
+  @createApiMapping KiteAPIMap.kloud
 
 
   constructor: (options) ->
@@ -141,21 +112,25 @@ module.exports = class KodingKiteKloudKite extends require('../kodingkite')
     { kontrol, computeController } = kd.singletons
     { klient } = kontrol.kites
     machine    = computeController.findMachineFromMachineId machineId
+    deferredCallback = (res) -> kd.utils.defer -> callback res
 
     if not machine or not machineId
-      return callback null
+      return deferredCallback null
 
     managed    = machine.provider is 'managed'
     klientKite = klient?[machine.uid]
 
-    if machine.status.state is Machine.State.Running or managed
+    if machine.status.state is Machine.State.NotInitialized
+      return deferredCallback { State: Machine.State.NotInitialized, via: 'klient' }
+
+    else if machine.status.state is Machine.State.Running or managed
       unless klientKite?
         klientKite = kontrol.getKite
           name            : 'klient'
           queryString     : machine.queryString
           correlationName : machine.uid
     else
-      return callback null
+      return deferredCallback null
 
     klientKite.ping()
 
@@ -208,7 +183,7 @@ module.exports = class KodingKiteKloudKite extends require('../kodingkite')
             kontrol.kites.kloud.singleton?.reconnect?()
             @_reconnectedOnce = yes
 
-          KiteLogger.failed 'kloud', 'info'
+          KiteLogger.failed 'kloud', 'info', payload
 
         # If kite somehow unregistered from Kontrol and Kloud is failing
         # to find it in Kontrol registry we are getting this `not found`
@@ -218,7 +193,7 @@ module.exports = class KodingKiteKloudKite extends require('../kodingkite')
         else if err.message is 'not found' and currentState is Machine.State.Running
 
           @resolveRequestingInfos machineId, { State: Machine.State.Stopped }
-          KiteLogger.failed 'kloud', 'info'
+          KiteLogger.failed 'kloud', 'info', payload
 
           kd.warn '[kloud:info] failed, Kite not found in Kontrol registry!', err
 

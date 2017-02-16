@@ -21,12 +21,11 @@ module.exports = class HomeAccountCredentialsView extends kd.CustomHTMLView
     @createFilterView()
 
     @listController = new AccountCredentialListController
-      view                    : new AccountCredentialList
-      limit                   : 15
-      wrapper                 : no
-      scrollView              : no
-      useCustomScrollView     : no
-      dontShowCredentialMenu  : yes
+      view                : new AccountCredentialList
+      limit               : 15
+      wrapper             : no
+      scrollView          : no
+      useCustomScrollView : no
 
     @addSubView @listController.getView()
 
@@ -84,4 +83,3 @@ module.exports = class HomeAccountCredentialsView extends kd.CustomHTMLView
     filter = {}
     filter.provider = value  if value
     @listController.filterByProvider filter
-

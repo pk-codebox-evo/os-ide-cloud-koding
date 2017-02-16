@@ -9,12 +9,10 @@
   .SidebarStackSection
     max-width               220px
 
-    h4
-      color                 #818181
+    color                   #818181
 
     &.active
-      h4
-        color               #E1E1E1
+      color                 #E1E1E1
 
     .SidebarSection-body
       rel()
@@ -32,7 +30,6 @@
           margin            0
 
   .menu-icon
-    box-shadow          0 0 15px #323232
     content             ''
     r-sprite            'app' '20_chevron_gray'
     margin-left         1px
@@ -63,7 +60,7 @@
     &.draft
       margin-bottom         0px
 
-    .SidebarSection-headerTitle:before
+    .SidebarSection-headerTitle a:before
       content               ''
       rel()
       borderBox()

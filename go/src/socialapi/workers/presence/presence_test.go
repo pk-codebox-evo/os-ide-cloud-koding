@@ -39,7 +39,7 @@ func TestPresenceDailyOperations(t *testing.T) {
 				pi, err := getPresenceInfoFromDB(&Ping{
 					AccountID:     p2.AccountId,
 					GroupName:     p2.GroupName,
-					paymentStatus: mongomodels.PaymentStatusActive,
+					paymentStatus: string(mongomodels.SubStatusActive),
 				})
 				So(err, ShouldBeNil)
 				So(pi, ShouldNotBeNil)
@@ -51,7 +51,7 @@ func TestPresenceDailyOperations(t *testing.T) {
 				pi2, err := getPresenceInfoFromDB(&Ping{
 					AccountID:     p2.AccountId,
 					GroupName:     "non_existent_group_name",
-					paymentStatus: mongomodels.PaymentStatusActive,
+					paymentStatus: string(mongomodels.SubStatusActive),
 				})
 				So(err, ShouldNotBeNil)
 				So(err, ShouldEqual, bongo.RecordNotFound)
@@ -60,7 +60,7 @@ func TestPresenceDailyOperations(t *testing.T) {
 				pi3, err := getPresenceInfoFromDB(&Ping{
 					AccountID:     rand.Int63(),
 					GroupName:     groupName1,
-					paymentStatus: mongomodels.PaymentStatusActive,
+					paymentStatus: string(mongomodels.SubStatusActive),
 				})
 				So(err, ShouldNotBeNil)
 				So(err, ShouldEqual, bongo.RecordNotFound)
@@ -75,13 +75,13 @@ func TestPresenceDailyVerifyRecord(t *testing.T) {
 		groupName1 := models.RandomGroupName()
 		Convey("With given presence data", t, func() {
 
-			Convey("should work properly with non existant data", func() {
+			Convey("should work properly with non existent data", func() {
 				today := time.Now().UTC()
 				ping := &Ping{
 					AccountID:     1, // non existing user
 					GroupName:     groupName1,
 					CreatedAt:     today,
-					paymentStatus: mongomodels.PaymentStatusActive,
+					paymentStatus: string(mongomodels.SubStatusActive),
 				}
 				key := getKey(ping, today)
 				_, err := pingCache.Get(key)
@@ -107,7 +107,7 @@ func TestPresenceDailyVerifyRecord(t *testing.T) {
 					AccountID:     2, // non existing user
 					GroupName:     groupName1,
 					CreatedAt:     prev,
-					paymentStatus: mongomodels.PaymentStatusActive,
+					paymentStatus: string(mongomodels.SubStatusActive),
 				}
 				So(insertPresenceInfoToDB(ping), ShouldBeNil)
 
@@ -127,7 +127,7 @@ func TestPresenceDailyVerifyRecord(t *testing.T) {
 					AccountID:     3, // non existing user
 					GroupName:     groupName1,
 					CreatedAt:     today,
-					paymentStatus: mongomodels.PaymentStatusActive,
+					paymentStatus: string(mongomodels.SubStatusActive),
 				}
 				So(insertPresenceInfoToDB(ping), ShouldBeNil)
 
@@ -152,13 +152,13 @@ func TestPresenceDailyPing(t *testing.T) {
 		groupName1 := models.RandomGroupName()
 		Convey("With given presence data", t, func() {
 
-			Convey("should work properly with non existant data", func() {
+			Convey("should work properly with non existent data", func() {
 				today := time.Now().UTC()
 				ping := &Ping{
 					AccountID:     1, // non existing user
 					GroupName:     groupName1,
 					CreatedAt:     today,
-					paymentStatus: mongomodels.PaymentStatusActive,
+					paymentStatus: string(mongomodels.SubStatusActive),
 				}
 				key := getKey(ping, today)
 				_, err := pingCache.Get(key)

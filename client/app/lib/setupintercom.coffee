@@ -5,6 +5,12 @@ fetchIntercomKey       = require 'app/util/fetchIntercomKey'
 
 module.exports = setupIntercom = ->
 
+  do setSmall = -> setTimeout ->
+    if i = document.getElementById 'intercom-container'
+    then setTimeout (-> i.classList = 'small'), 1000
+    else setSmall()
+  , 2000
+
   fetchIntercomKey (intercomAppId) ->
     return  unless intercomAppId
 

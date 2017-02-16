@@ -26,7 +26,7 @@ import (
 )
 
 // TODO(rjeczalik): remove context.Context from the Provider / Stack / Machine API,
-// which is a leftover from the old API - it was errornously desgined to
+// which is a leftover from the old API - it was errornously designed to
 // store global-scoped values.
 
 // Stacker is responsible for augmenting Provider values so they implement
@@ -276,7 +276,7 @@ func (s *Stacker) FetchCredData(bm *BaseMachine) error {
 
 func (s *Stacker) ValidateUser(user *models.User, users []models.MachineUser, r *kite.Request) error {
 	// give access to kloudctl immediately
-	if stack.IsKloudctlAuth(r, s.KloudSecretKey) {
+	if stack.IsKloudSecretAuth(r, s.KloudSecretKey) {
 		return nil
 	}
 

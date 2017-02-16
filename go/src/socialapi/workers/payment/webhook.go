@@ -157,6 +157,10 @@ func customerSourceCreatedHandler(raw []byte) error {
 		return err
 	}
 
+	if err := syncGroupWithCustomerID(req.Customer.ID); err != nil {
+		return err
+	}
+
 	const eventName = "entered credit card"
 
 	return sendEventForCustomer(req.Customer.ID, eventName, nil)
@@ -166,6 +170,10 @@ func customerSourceDeletedHandler(raw []byte) error {
 	var req stripe.Card
 	err := json.Unmarshal(raw, &req)
 	if err != nil {
+		return err
+	}
+
+	if err := syncGroupWithCustomerID(req.Customer.ID); err != nil {
 		return err
 	}
 
@@ -325,7 +333,7 @@ func handleInvoiceStateChange(invoice *stripe.Invoice) error {
 	status := group.Payment.Subscription.Status
 
 	// if sub is in cancelled state within 2 months send an event
-	if status == string(SubStatusCanceled) {
+	if stripe.SubStatus(status) == SubStatusCanceled {
 		// if group has been created in last 2 months (1 month trial + 1 month free)
 		totalTrialTime := time.Now().UTC().Add(-time.Hour * 24 * 60)
 		if group.Id.Time().After(totalTrialTime) {
@@ -339,7 +347,7 @@ func handleInvoiceStateChange(invoice *stripe.Invoice) error {
 		group.Slug,
 		"payment_status_changed",
 		map[string]string{
-			"oldStatus": group.Payment.Subscription.Status,
+			"oldStatus": string(group.Payment.Subscription.Status),
 			"newStatus": string(status),
 		},
 	)

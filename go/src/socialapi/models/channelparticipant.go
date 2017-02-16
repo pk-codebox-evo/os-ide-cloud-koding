@@ -323,16 +323,16 @@ func getParticipatedChannelsQuery(accountId int64, groupName string) *gorm.DB {
 		Table(c.BongoName()).
 		Select("api.channel_participant.channel_id").
 		Joins(
-		`left join api.channel on
+			`left join api.channel on
 		 api.channel_participant.channel_id = api.channel.id`).
 		Where(
-		`api.channel_participant.account_id = ? and
+			`api.channel_participant.account_id = ? and
 		 api.channel.group_name = ? and
 		 api.channel_participant.status_constant = ?`,
-		accountId,
-		groupName,
-		ChannelParticipant_STATUS_ACTIVE,
-	)
+			accountId,
+			groupName,
+			ChannelParticipant_STATUS_ACTIVE,
+		)
 }
 
 func (c *ChannelParticipant) ParticipatedChannelCount(a *Account, q *request.Query) (*CountResponse, error) {
@@ -428,10 +428,10 @@ func (c *ChannelParticipant) fetchDefaultChannels(q *request.Query) ([]int64, er
 		Model(channel).
 		Table(channel.BongoName()).
 		Where(
-		"group_name = ? AND type_constant IN (?)",
-		q.GroupName,
-		[]string{Channel_TYPE_GROUP, Channel_TYPE_ANNOUNCEMENT},
-	).
+			"group_name = ? AND type_constant IN (?)",
+			q.GroupName,
+			[]string{Channel_TYPE_GROUP, Channel_TYPE_ANNOUNCEMENT},
+		).
 		// Order("type_constant ASC"). // order by increases query plan by x12K
 		// no need to traverse all database, limit with a known count
 		Limit(2).
@@ -475,7 +475,7 @@ func (c *ChannelParticipant) ensureParticipation(accountId int64, channels []Cha
 		cp.ChannelId = channel.Id
 		cp.AccountId = accountId
 		// create is idempotent, multiple calls wont cause any problem, if the
-		// user is already a participant, will return as if a succesful request
+		// user is already a participant, will return as if a successful request
 		if err := cp.Create(); err != nil {
 			return err
 		}

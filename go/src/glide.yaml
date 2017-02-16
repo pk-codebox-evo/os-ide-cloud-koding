@@ -204,6 +204,8 @@ import:
 - package: github.com/mattes/migrate
   version: 9bb037339f0f7d2c7591ef148a5cbf78ff65d9b8
 - package: github.com/alecthomas/gocyclo
+- package: github.com/alecthomas/template
+- package: github.com/alecthomas/units
 - package: github.com/remyoudompheng/go-misc
   subpackages:
   - deadcode
@@ -223,6 +225,8 @@ import:
 - package: github.com/golang/snappy
 - package: github.com/hailocab/go-hostpool
 - package: gopkg.in/inf.v0
+- package: gopkg.in/alecthomas/kingpin.v2
+- package: gopkg.in/alecthomas/kingpin.v3-unstable
 - package: github.com/juju/ratelimit
 - package: github.com/lann/builder
 - package: github.com/ooyala/go-dogstatsd
@@ -255,6 +259,7 @@ import:
 - package: golang.org/x/tools/go/loader
 - package: github.com/kr/binarydist
 - package: github.com/google/go-github/github
+- package: github.com/google/shlex
 - package: github.com/Sirupsen/logrus
 - package: github.com/opencontainers/runc
 - package: github.com/kardianos/osext
@@ -271,6 +276,7 @@ import:
   - codec
 - package: github.com/digitalocean/godo
 - package: github.com/google/go-querystring/query
+- package: github.com/djherbis/times
 - package: github.com/tent/http-link-go
 - package: github.com/Azure/azure-sdk-for-go
 - package: github.com/Banno/terraform-provider-marathon
@@ -291,7 +297,15 @@ import:
 - package: github.com/PuerkitoBio/purell
 - package: github.com/docker/go-units
 - package: github.com/stretchr/testify
+- package: github.com/dustin/go-humanize
 - package: github.com/PuerkitoBio/urlesc
+- package: github.com/jacobsa/oglematchers
+- package: github.com/jacobsa/ogletest
+- package: github.com/jacobsa/syncutil
+- package: github.com/jacobsa/timeutil
+- package: github.com/jacobsa/oglemock
+- package: github.com/jacobsa/reqtrace
+- package: github.com/kylelemons/godebug
 ignore:
 - koding/tools/logger
 - config

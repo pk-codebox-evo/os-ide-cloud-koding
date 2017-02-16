@@ -140,7 +140,16 @@ func UpdateCustomerForGroup(username, groupName string, params *stripe.CustomerP
 		}
 	}
 
-	return customer.Update(group.Payment.Customer.ID, params)
+	cus, err := customer.Update(group.Payment.Customer.ID, params)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := syncGroupWithCustomerID(group.Payment.Customer.ID); err != nil {
+		return nil, err
+	}
+
+	return cus, err
 }
 
 // GetCustomerForGroup get the registered customer info of a group if exists
@@ -268,7 +277,7 @@ func getPlan(subscription *stripe.Sub, totalCount int) (*stripe.Plan, error) {
 	// happen if the team got more members than the previous subscription's user
 	// count in the current month. The subscription will be automatically fixed
 	// on the next billing date. We do not change the subscription on each user
-	// addition or deletion becasue Stripe charges the user whenever a
+	// addition or deletion because Stripe charges the user whenever a
 	// subscription change happens, so we only change the subscription on the
 	// billing date with cancelling the previous subscription & invoice and
 	// creating a new subscription with new requirement
@@ -342,6 +351,18 @@ func CheckCustomerHasSource(cusID string) error {
 	cus, err := customer.Get(cusID, nil)
 	if err != nil {
 		return err
+	}
+
+	return checkCustomerHasSourceWithCustomer(cus)
+}
+
+func checkCustomerHasSourceWithCustomer(cus *stripe.Customer) error {
+	if cus == nil {
+		return ErrCustomerNotExists
+	}
+
+	if cus.Sources == nil {
+		return ErrCustomerSourceNotExists
 	}
 
 	count := 0

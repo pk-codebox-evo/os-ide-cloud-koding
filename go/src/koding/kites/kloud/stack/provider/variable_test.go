@@ -70,7 +70,10 @@ func TestVariables(t *testing.T) {
 	}
 
 	for name, cas := range cases {
+		// capture range variable here
+		cas := cas
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			vars := provider.ReadVariables(cas.s)
 
 			if !reflect.DeepEqual(vars, cas.vars) {
@@ -78,6 +81,40 @@ func TestVariables(t *testing.T) {
 			}
 
 			got := provider.ReplaceVariables(cas.s, cas.vars, blank)
+
+			if got != cas.want {
+				t.Fatalf("got %q, want %q", got, cas.want)
+			}
+		})
+	}
+}
+
+func TestEscapeDeadVariables(t *testing.T) {
+	cases := map[string]struct {
+		userdata string
+		want     string
+	}{
+		"simple": {
+			"# ${var.something}\n",
+			"# $${var.something}\n",
+		},
+		"multiple in single line": {
+			"# ${var.one}${var.two}   ${var.three}\n",
+			"# $${var.one}$${var.two}   $${var.three}\n",
+		},
+		"multiple in multiple lines": {
+			"# ${var.one}\n#${var.two}\n   #    ${var.three}\n",
+			"# $${var.one}\n#$${var.two}\n   #    $${var.three}\n",
+		},
+		"multiple in multiple lines without eofNL": {
+			"# ${var.one}\n#${var.two}\n   #    ${var.three}",
+			"# $${var.one}\n#$${var.two}\n   #    $${var.three}",
+		},
+	}
+
+	for name, cas := range cases {
+		t.Run(name, func(t *testing.T) {
+			got := provider.EscapeDeadVariables(cas.userdata)
 
 			if got != cas.want {
 				t.Fatalf("got %q, want %q", got, cas.want)

@@ -39,7 +39,9 @@ ensureGroupPayment = ->
 
 ensureCreditCard = ({ dispatch }) ->
 
-  if globals.hasCreditCard
+  { payment } = globals.currentGroup
+
+  if payment.customer.hasCard
   then Promise.resolve()
   else Promise.reject Status.NEEDS_UPGRADE
 
@@ -58,11 +60,9 @@ module.exports = dispatchInitialActions = (store) ->
     .then -> loadGroup(store)
     .then -> loadUserDetails(store)
     .then -> ensureGroupPayment()
-    .then -> loadPaymentDetails(store)
     .then -> ensureCreditCard(store)
+    .then -> loadPaymentDetails(store)
 
   promise
     .then (args...) -> console.log 'finished dispatching initial actions'
     .catch (err) -> console.info 'error when dispatching initial actions', err
-
-

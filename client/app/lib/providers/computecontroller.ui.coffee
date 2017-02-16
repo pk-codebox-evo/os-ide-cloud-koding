@@ -153,17 +153,17 @@ module.exports = class ComputeControllerUI
     saveButtonTitle = 'Save This & Continue'  if noCredFound
 
     buttons      =
-      Cancel     :
-        style    : 'solid medium cancel'
-        type     : 'button'
-        callback : -> form.emit 'Cancel'
-
       Save       :
         title    : saveButtonTitle
         type     : 'submit'
-        style    : 'solid primary medium save-btn'
+        style    : 'solid primary green compact save-btn'
         loader   : { color : '#444444' }
         callback : -> @hideLoader()
+
+      Cancel     :
+        style    : 'solid compact cancel'
+        type     : 'button'
+        callback : -> form.emit 'Cancel'
 
     if requiredFields
       buttons = injectCustomActions requiredFields, buttons, (generatedKeys) ->
@@ -184,7 +184,7 @@ module.exports = class ComputeControllerUI
 
       buttons['Advanced Mode'] =
         title    : 'Advanced Mode'
-        style    : 'solid medium advanced-mode-btn'
+        style    : 'solid compact advanced-mode-btn'
         type     : 'button'
         callback : ->
           form.toggleClass 'in-advanced-mode'
@@ -193,8 +193,8 @@ module.exports = class ComputeControllerUI
           else @setTitle 'Advanced Mode'
 
 
-    kiteQueryPath = new kd.CustomHTMLView
-      cssClass : 'kite-query-path'
+    kiteQueryPath = new kd.View
+      cssClass : 'formline help-line'
       partial : "<a href='https://www.koding.com/docs/creating-a-vagrant-stack'>Where do I get my Kite Query Path?</a>"
 
     form = new KDFormViewWithFields
@@ -210,7 +210,7 @@ module.exports = class ComputeControllerUI
         # Remove fields which has no value in it
         # Trim value of fields which has value
         for field, value of data
-          value = value.trim()  if value
+          data[field] = value.trim()  if typeof value is 'string'
           delete data[field]  if value is ''
 
         if callback
@@ -383,7 +383,7 @@ module.exports = class ComputeControllerUI
           button  : 'Yes, remove'
         dontWarnMe:
           title   : 'Are you sure?'
-          message : '<h2>By clicking Yes, You will not recieve anymore update for this stack.</h2>'
+          message : '<h2>By clicking Yes, You will not receive anymore update for this stack.</h2>'
           button  : 'Yes'
         enableTeamOAuth :
           title   : 'Do you want to setup as organization token?'

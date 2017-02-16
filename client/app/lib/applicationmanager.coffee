@@ -38,14 +38,6 @@ class ApplicationManager extends KDObject
 
     @on 'AppIsBeingShown', @bound 'setFrontApp'
 
-    # set unload listener
-    wc = kd.singleton 'windowController'
-    wc.addUnloadListener 'window', =>
-      for own app of @appControllers when app in ['Ace', 'Terminal', 'Teamwork']
-        safeToUnload = no
-        break
-      return safeToUnload ? yes
-
 
   isAppInternal: (name = '') -> globals.config.apps[name]?
 
@@ -116,9 +108,12 @@ class ApplicationManager extends KDObject
       appParams = options.params or {}
 
       if appOptions?.multiple
-        if options.forceNew or appOptions.openWith is 'forceNew'
+        { forceNew, showInstance = yes } = options
+        if forceNew or appOptions.openWith is 'forceNew'
           return @create name, appParams, (appInstance) =>
-            @showInstance appInstance, callback
+            if showInstance
+            then @showInstance appInstance, callback
+            else kd.utils.defer -> callback appInstance
 
         switch appOptions.openWith
           when 'lastActive' then do defaultCallback
@@ -400,7 +395,7 @@ class ApplicationManager extends KDObject
       else optionSet.lastActiveIndex = index
 
 
-  # setGroup:-> console.log 'setGroup', arguments
+  # setGroup: -> console.log 'setGroup', arguments
 
 
   # temp
@@ -429,7 +424,7 @@ class ApplicationManager extends KDObject
 
   # fetchStorage: (appId, version, callback) ->
   #   # warn "System still trying to access application storage for #{appId}"
-  #   KD.whoami().fetchAppStorage {appId, version}, (error, storage) =>
+  #   KD.whoami().fetchAppStorage { appId, version }, (error, storage) =>
   #     unless storage
-  #       storage = {appId,version,bucket:{}} # creating a fake storage
+  #       storage = { appId,version,bucket:{} } # creating a fake storage
   #     callback error, storage

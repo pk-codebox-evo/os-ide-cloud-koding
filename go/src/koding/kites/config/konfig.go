@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -59,6 +60,7 @@ type Konfig struct {
 	Endpoints *Endpoints `json:"endpoints,omitempty"`
 
 	KontrolURL string `json:"kontrolURL,omitempty"` // deprecated / read-only
+	TunnelURL  string `json:"tunnelURL,omitempty"`  // deprecated / read-only
 
 	// Kite configuration.
 	Environment string `json:"environment,omitempty"`
@@ -75,7 +77,7 @@ type Konfig struct {
 	PublicBucketName   string `json:"publicBucketName,omitempty"`
 	PublicBucketRegion string `json:"publicBucketRegion,omitempty"`
 
-	Debug bool `json:"debug,omitempty"`
+	Debug bool `json:"debug,string,omitempty"`
 
 	// Metadata keeps per-app configuration.
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
@@ -114,7 +116,20 @@ func (k *Konfig) Valid() error {
 }
 
 func (k *Konfig) ID() string {
-	hash := sha1.Sum([]byte(k.KodingPublic().String()))
+	return ID(k.KodingPublic().String())
+}
+
+func ID(kodingURL string) string {
+	if kodingURL == "" {
+		return ""
+	}
+	if u, err := url.Parse(kodingURL); err == nil {
+		// Since id is input sensitive we clean the path so "example.com/koding"
+		// "example.com/koding/" are effectively the same urls.
+		u.Path = strings.TrimRight(path.Clean(u.Path), "/")
+		kodingURL = u.String()
+	}
+	hash := sha1.Sum([]byte(kodingURL))
 	return hex.EncodeToString(hash[:4])
 }
 
@@ -132,7 +147,7 @@ func (k *Konfig) KodingPublic() *url.URL {
 	}
 
 	if u, err := url.Parse(k.KontrolURL); err == nil {
-		u.Path = "/"
+		u.Path = ""
 		return u
 	}
 
@@ -164,6 +179,14 @@ func (k *Konfig) buildKiteConfig() *konfig.Config {
 	return konfig.New()
 }
 
+func NewKonfigURL(koding *url.URL) *Konfig {
+	return &Konfig{
+		Endpoints: &Endpoints{
+			Koding: NewEndpointURL(koding),
+		},
+	}
+}
+
 type Konfigs map[string]*Konfig
 
 func (kfg Konfigs) Slice() []*Konfig {
@@ -180,7 +203,7 @@ func (kfg Konfigs) Slice() []*Konfig {
 	return slice
 }
 
-// Enviroment is a hacky workaround for kd <-> klient environments.
+// Environment is a hacky workaround for kd <-> klient environments.
 // The managed klient expects to have kd from production channel,
 // and devmanaged klient - from development. Depending from which
 // app we load the the default Koding configuration, we need
@@ -213,10 +236,10 @@ func NewKonfig(e *Environments) *Konfig {
 	return &Konfig{
 		Environment: e.Env,
 		Endpoints: &Endpoints{
-			Koding:       Builtin.Endpoints.KodingBase,
-			Tunnel:       Builtin.Endpoints.TunnelServer,
-			IP:           Builtin.Endpoints.IP,
-			IPCheck:      Builtin.Endpoints.IPCheck,
+			Koding:       Builtin.Endpoints.KodingBase.Copy(),
+			Tunnel:       Builtin.Endpoints.TunnelServer.Copy(),
+			IP:           Builtin.Endpoints.IP.Copy(),
+			IPCheck:      Builtin.Endpoints.IPCheck.Copy(),
 			KlientLatest: ReplaceEnv(Builtin.Endpoints.KlientLatest, e.klientEnv()),
 			KDLatest:     ReplaceEnv(Builtin.Endpoints.KDLatest, RmManaged(e.kdEnv())),
 			Klient: &Endpoint{

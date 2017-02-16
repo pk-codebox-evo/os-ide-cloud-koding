@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,9 +32,10 @@ var defaultCacheOpts = &config.CacheOptions{
 var DefaultClient = &Client{}
 
 type Client struct {
-	CacheOpts *config.CacheOptions
-	Home      string       // uses config.KodingHome by default
-	Owner     *config.User // uses config.CurrentUser by default
+	Cache     *config.Cache        // if nil, a new db will be opened during each operation
+	CacheOpts *config.CacheOptions // if nil, defaultCacheOpts are going to be used
+	Home      string               // uses config.KodingHome by default
+	Owner     *config.User         // uses config.CurrentUser by default
 
 	once sync.Once // for c.init()
 }
@@ -58,10 +60,19 @@ func (c *Client) Read(e *config.Environments) *config.Konfig {
 	k := config.NewKonfig(e)
 
 	_ = c.commit(func(cache *config.Cache) error {
-		var mixin config.Konfig
+		var used usedKonfig
+		var konfigs = make(config.Konfigs)
 
-		if err := cache.GetValue("konfig", &mixin); err == nil {
-			if err := mergeIn(k, &mixin); err != nil {
+		if err := cache.GetValue("konfigs.used", &used); err != nil {
+			return err
+		}
+
+		if err := cache.GetValue("konfigs", &konfigs); err != nil {
+			return err
+		}
+
+		if mixin, ok := konfigs[used.ID]; ok {
+			if err := mergeIn(k, mixin); err != nil {
 				return err
 			}
 		}
@@ -164,26 +175,15 @@ func (c *Client) initClient() {
 	// continue to work. When we're sure it's no longer needed, this
 	// code should be removed.
 	_ = c.commit(func(cache *config.Cache) error {
-		return nonil(
-			// Best-effort attempt to ensure data in klient.bolt is consistent.
-			// Ignore any error, as there's no recovery from corrupted
-			// configuration, other than reinstalling kd / klient.
-			//
-			// This migration must be executed before kite.key one.
-			migrateKonfigBolt(cache),
-
-			// Best-effort attemp to ensure /etc/kite/kite.key is stored
-			// in ~/.config/koding/konfig.bolt, so it is possible to
-			// use kd / konfig with koding deployments that sign with
-			// different kontrol keys, e.g. production <-> sandbox or
-			// production <-> self-hosted opensource version.
-			migrateKiteKey(cache),
-		)
+		// Best-effort attempt to ensure data in klient.bolt is consistent.
+		// Ignore any error, as there's no recovery from corrupted
+		// configuration, other than reinstalling kd / klient.
+		return migrateKonfigBolt(cache)
 	})
 }
 
 func (c *Client) boltFile(app string) string {
-	if used, err := c.Used(); err == nil {
+	if used, err := c.Used(); err == nil && app != "konfig" {
 		return filepath.Join(config.KodingHome(), app+"."+used.ID()+".bolt")
 	}
 	return filepath.Join(config.KodingHome(), app+".bolt")
@@ -197,6 +197,10 @@ func (c *Client) cacheOpts() *config.CacheOptions {
 }
 
 func (c *Client) commit(fn func(*config.Cache) error) error {
+	if c.Cache != nil {
+		return fn(c.Cache)
+	}
+
 	cache := config.NewCache(c.cacheOpts())
 	return nonil(fn(cache), cache.Close())
 }
@@ -279,6 +283,26 @@ func migrateKonfigBolt(cache *config.Cache) error {
 		id := oldKonfig.ID()
 
 		if _, ok := konfigs[id]; !ok {
+			if oldKonfig.Endpoints == nil {
+				oldKonfig.Endpoints = &config.Endpoints{}
+			}
+
+			if u, err := url.Parse(oldKonfig.KontrolURL); err == nil && oldKonfig.KontrolURL != "" {
+				u.Path = ""
+				oldKonfig.Endpoints.Koding = config.NewEndpointURL(u)
+			}
+
+			if oldKonfig.TunnelURL != "" {
+				oldKonfig.Endpoints.Tunnel = config.NewEndpoint(oldKonfig.TunnelURL)
+			}
+
+			// Best-effort attempt to ensure /etc/kite/kite.key is stored
+			// in ~/.config/koding/konfig.bolt, so it is possible to
+			// use kd / konfig with koding deployments that sign with
+			// different kontrol keys, e.g. production <-> sandbox or
+			// production <-> self-hosted opensource version.
+			_ = migrateKiteKey(&oldKonfig)
+
 			konfigs[id] = &oldKonfig
 
 			_ = cache.SetValue("konfigs", konfigs)
@@ -299,21 +323,19 @@ func migrateKonfigBolt(cache *config.Cache) error {
 	return nil
 }
 
-func migrateKiteKey(cache *config.Cache) error {
-	var konfig config.Konfig
-
-	if err := makeUsedFunc(&konfig)(cache); err != nil {
-		return err
-	}
-
+func migrateKiteKey(konfig *config.Konfig) error {
 	// KiteKey already exists in the DB - we don't care
-	// whether it's our one or user overriden it explictely
+	// whether it's our one or user overridden it explictely
 	// as long as it's there.
 	if konfig.KiteKey != "" {
 		return nil
 	}
 
 	defaultKitekey := config.NewKonfig(&config.Environments{Env: konfig.Environment}).KiteKeyFile
+	if defaultKitekey == "" {
+		defaultKitekey = filepath.FromSlash("/etc/kite/kite.key")
+	}
+
 	kitekey := konfig.KiteKeyFile
 
 	if kitekey == "" {
@@ -337,7 +359,7 @@ func migrateKiteKey(cache *config.Cache) error {
 
 	konfig.KiteKey = string(p)
 
-	return makeUseFunc(&konfig)(cache)
+	return nil
 }
 
 func isFatal(err error) bool {
@@ -353,7 +375,7 @@ func mergeIn(kfg, mixin *config.Konfig) error {
 	return json.Unmarshal(p, kfg)
 }
 
-func setFlatKeyValue(m map[string]interface{}, key, value string) error {
+func SetFlatKeyValue(m map[string]interface{}, key, value string) error {
 	keys := strings.Split(key, ".")
 	it := m
 	last := len(keys) - 1
@@ -392,7 +414,7 @@ func setKonfig(cfg *config.Konfig, key, value string) error {
 		return err
 	}
 
-	if err := setFlatKeyValue(m, key, value); err != nil {
+	if err := SetFlatKeyValue(m, key, value); err != nil {
 		return err
 	}
 

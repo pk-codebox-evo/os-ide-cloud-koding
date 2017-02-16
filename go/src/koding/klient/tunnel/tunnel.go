@@ -209,7 +209,7 @@ func (t *Tunnel) updateOptions(reg *tunnelproxy.RegisterResult) {
 	t.restoreServices()
 	t.mu.Unlock()
 
-	if err := t.db.SetOptions(t.opts); err != nil {
+	if err := t.db.SetOptions(t.opts); err != nil && err != storage.ErrKeyNotFound {
 		t.opts.Log.Warning("tunnel: unable to update options: %s", err)
 	}
 
@@ -224,9 +224,9 @@ func (t *Tunnel) updateOptions(reg *tunnelproxy.RegisterResult) {
 }
 
 func (t *Tunnel) initServices() {
-	s, err := t.db.Services()
+	_, err := t.db.Services()
 	if err == storage.ErrKeyNotFound {
-		s = tunnelproxy.Services{
+		s := tunnelproxy.Services{
 			"ssh": &tunnelproxy.Service{
 				Name:      "ssh",
 				LocalAddr: "127.0.0.1:22",

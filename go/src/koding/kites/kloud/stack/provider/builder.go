@@ -129,7 +129,7 @@ func NewBuilder(opts *BuilderOptions) *Builder {
 // BuildTeam fetches team details from MongoDB.
 //
 // When it returns with nil error, the b.Team field is
-// guranteed to be non-nil.
+// guaranteed to be non-nil.
 func (b *Builder) BuildTeam(team string) error {
 	g, err := modelhelper.GetGroup(team)
 	if err != nil {
@@ -217,8 +217,22 @@ func (b *Builder) BuildStackTemplate(templateID string) error {
 	return nil
 }
 
+// Authorize verifies whether user is allowed to access b.StackTemplate.
+//
+// Prior calling to this method it is required to build the stack
+// template first.
+//
+// If the stack template was not built, the method is a nop.
+func (b *Builder) Authorize(username string) error {
+	if b.StackTemplate == nil {
+		return nil // nop
+	}
+
+	return modelhelper.HasTemplateAccess(b.StackTemplate, username)
+}
+
 // FindMachine looks for a jMachine document in b.Machines which meta.assignedLabel
-// matches the given paramter.
+// matches the given parameter.
 //
 // If assignedLabel is empty, FindMachine returns nil.
 // If no machine was found, FindMachine returns nil.
@@ -589,7 +603,7 @@ func (b *Builder) InterpolateField(resource map[string]interface{}, resourceName
 			res["depends_on"] = []interface{}{}
 		}
 
-		triggers[field] = s
+		triggers[field] = EscapeDeadVariables(s)
 	}
 }
 

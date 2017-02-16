@@ -86,7 +86,9 @@ func (m *MongoDatabase) Machines(f *Filter) ([]*Machine, error) {
 	// remove duplicated values.
 	stackTmplIDs := make(map[bson.ObjectId]struct{})
 	for i := range machinesDB {
-		stackTmplIDs[machinesDB[i].GeneratedFrom.TemplateId] = struct{}{}
+		if machinesDB[i].GeneratedFrom != nil {
+			stackTmplIDs[machinesDB[i].GeneratedFrom.TemplateId] = struct{}{}
+		}
 	}
 
 	// We don't need to search in jGroups collection in order to find team name
@@ -109,8 +111,6 @@ func (m *MongoDatabase) Machines(f *Filter) ([]*Machine, error) {
 	for i, mdb := range machinesDB {
 		machines[i] = &Machine{
 			ID:          mdb.ObjectId.Hex(),
-			Team:        groupTitles[mdb.GeneratedFrom.TemplateId][0],
-			Stack:       groupTitles[mdb.GeneratedFrom.TemplateId][1],
 			Provider:    mdb.Provider,
 			Label:       mdb.Label,
 			IP:          hostOnly(mdb.IpAddress),
@@ -124,6 +124,11 @@ func (m *MongoDatabase) Machines(f *Filter) ([]*Machine, error) {
 			},
 			Users: filterUsers(mdb.Users, f),
 		}
+
+		if mdb.GeneratedFrom != nil {
+			machines[i].Team = groupTitles[mdb.GeneratedFrom.TemplateId][0]
+			machines[i].Stack = groupTitles[mdb.GeneratedFrom.TemplateId][1]
+		}
 	}
 
 	return machines, nil
@@ -131,7 +136,7 @@ func (m *MongoDatabase) Machines(f *Filter) ([]*Machine, error) {
 
 // toSlice is a helper function that converts bson.ObjectId set to slice.
 func toSlice(set map[bson.ObjectId]struct{}) (s []bson.ObjectId) {
-	for objID, _ := range set {
+	for objID := range set {
 		s = append(s, objID)
 	}
 	return s

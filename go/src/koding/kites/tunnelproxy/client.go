@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -471,9 +472,12 @@ func (c *Client) handleReg(resp *RegisterResult, err error) error {
 
 	c.retry++
 
+	// kite package sends errors as string message.
+	isAuthError := strings.Contains(err.Error(), "authenticationError:")
+
 	// If we exceeded number of max retries or we were not connected before,
 	// we use default tunnelserver kite URL.
-	if c.connected == nil || c.retry >= c.opts.maxRegisterRetry() {
+	if c.connected == nil || c.retry >= c.opts.maxRegisterRetry() || isAuthError {
 		c.tunnelKiteURL = c.opts.tunnelKiteURL()
 		c.connected = nil
 	}
@@ -507,7 +511,7 @@ func (c *Client) tryRegister() error {
 	return c.handleReg(&resp, nil)
 }
 
-// fetchIdent registeres to tunnelserver and gives identifier for the session.
+// fetchIdent registers to tunnelserver and gives identifier for the session.
 func (c *Client) fetchIdent() (string, error) {
 	if err := c.tryRegister(); err != nil {
 		return "", err

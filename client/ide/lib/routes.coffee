@@ -5,7 +5,6 @@ actions         = require 'app/flux/environment/actions'
 Machine         = require 'app/providers/machine'
 lazyrouter      = require 'app/lazyrouter'
 dataProvider    = require 'app/userenvironmentdataprovider'
-isTeamReactSide = require 'app/util/isTeamReactSide'
 
 
 selectWorkspaceOnSidebar = (data) ->
@@ -16,10 +15,7 @@ selectWorkspaceOnSidebar = (data) ->
 
   return no if not machine or not workspace
 
-  if isTeamReactSide()
-    actions.setSelectedWorkspaceId workspace._id
-  else
-    kd.getSingleton('mainView').activitySidebar.selectWorkspace data
+  actions.setSelectedWorkspaceId workspace._id
 
   storage = kd.singletons.localStorageController.storage 'IDE'
 
@@ -56,22 +52,23 @@ loadIDENotFound = ->
 
 loadIDE = (data, done = kd.noop) ->
 
-  { selectWorkspaceOnSidebar, findInstance } = module.exports
+  { machine, workspace, username, channelId, showInstance = yes } = data
 
-  { machine, workspace, username, channelId } = data
-  selectWorkspaceOnSidebar data
-  actions.setSelectedMachineId machine._id
+  if showInstance
 
-  if machine.data?.generatedFrom?
-    actions.setSelectedTemplateId machine.data.generatedFrom.templateId
-  else
-    actions.setSelectedTemplateId null
+    selectWorkspaceOnSidebar data
+    actions.setSelectedMachineId machine._id
+
+    actions.setSelectedTemplateId if machine.data?.generatedFrom?
+    then machine.data.generatedFrom.templateId
+    else null
 
   appManager = kd.getSingleton 'appManager'
   ideApps    = appManager.appControllers.IDE
   machineUId = machine.uid
+
   callback   = ->
-    appManager.open 'IDE', { forceNew: yes }, (app) ->
+    appManager.open 'IDE', { forceNew: yes, showInstance }, (app) ->
       app.mountedMachineUId   = machineUId
       app.workspaceData       = workspace
 
@@ -91,7 +88,7 @@ loadIDE = (data, done = kd.noop) ->
 
   ideInstance = findInstance machine, workspace
 
-  if ideInstance
+  if ideInstance and showInstance
     appManager.showInstance ideInstance
     selectWorkspaceOnSidebar data # should not be required
   else
@@ -102,12 +99,12 @@ findInstance = (machine, workspace) ->
 
   ideApps       = kd.singletons.appManager.appControllers.IDE
   machineUId    = machine.uid
-  workspaceId   = workspace.getId()
-  workspaceSlug = workspace.slug
+  workspaceId   = workspace?.getId()
+  workspaceSlug = workspace?.slug
 
   for instance in ideApps.instances
     isSameMachine   = instance.mountedMachineUId is machineUId
-    isSameWorkspace = instance.workspaceData?.getId() is workspaceId
+    isSameWorkspace = workspace and instance.workspaceData?.getId() is workspaceId
 
     if isSameMachine
       if isSameWorkspace then ideInstance = instance

@@ -13,7 +13,10 @@ import (
 // swagger:model JGroupRole
 type JGroupRole struct {
 
-	// is configureable
+	// id
+	ID string `json:"_id,omitempty"`
+
+	// is configurable
 	IsConfigureable string `json:"isConfigureable,omitempty"`
 
 	// is default

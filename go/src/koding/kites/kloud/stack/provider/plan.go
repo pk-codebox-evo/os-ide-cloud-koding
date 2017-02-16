@@ -9,6 +9,11 @@ import (
 	"golang.org/x/net/context"
 )
 
+var escapeVars = []string{
+	"userInput_",
+	"payload_",
+}
+
 func (bs *BaseStack) HandlePlan(ctx context.Context) (interface{}, error) {
 	arg, ok := ctx.Value(stack.PlanRequestKey).(*stack.PlanRequest)
 	if !ok {
@@ -39,11 +44,15 @@ func (bs *BaseStack) HandlePlan(ctx context.Context) (interface{}, error) {
 		return nil, err
 	}
 
+	if err := bs.Builder.Authorize(bs.Req.Username); err != nil {
+		return nil, err
+	}
+
 	bs.Log.Debug("Fetched terraform data: koding=%+v, template=%+v", bs.Builder.Koding, bs.Builder.Template)
 
 	contentID := bs.Req.Username + "-" + arg.StackTemplateID
 
-	bs.Log.Debug("Stack template before plan: %s", contentID, util.PrettyJSON(bs.Builder.StackTemplate.Template.Content))
+	bs.Log.Debug("Stack template before plan: %s", contentID, util.LazyJSON(bs.Builder.StackTemplate.Template.Content))
 
 	if err := bs.Builder.BuildTemplate(bs.Builder.StackTemplate.Template.Content, contentID); err != nil {
 		return nil, err
@@ -64,8 +73,16 @@ func (bs *BaseStack) HandlePlan(ctx context.Context) (interface{}, error) {
 	// Plan request is made right away the template is saved, it may
 	// not have all the credentials provided yet. We set them all to
 	// to dummy values to make the template pass terraform parsing.
-	if err := bs.Builder.Template.FillVariables("userInput_"); err != nil {
-		return nil, err
+	for _, name := range escapeVars {
+		if err := bs.Builder.Template.FillVariables(name); err != nil {
+			return nil, err
+		}
+	}
+
+	if len(arg.Variables) != 0 {
+		if err := bs.Builder.Template.InjectVariables("", arg.Variables); err != nil {
+			return nil, err
+		}
 	}
 
 	machines, err := bs.plan()
